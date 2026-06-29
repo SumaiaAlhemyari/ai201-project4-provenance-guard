@@ -48,18 +48,28 @@ Just the number.
 Text to analyze:
 {text}"""
 
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
-    )
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+        )
 
-    raw = response.choices[0].message.content.strip()
+        raw = response.choices[0].message.content.strip()
 
-    # Convert to float and clamp between 0 and 1
-    score = float(raw)
-    score = max(0.0, min(1.0, score))
-    return score
+        # Convert to float and clamp between 0 and 1
+        score = float(raw)
+        score = max(0.0, min(1.0, score))
+        return score
+
+    except ValueError:
+        # Groq returned something that wasn't a number
+        # Return a neutral score rather than crashing
+        return 0.5
+
+    except Exception:
+        # Any other error (network, API) — return neutral score
+        return 0.5
 
 
 # ══════════════════════════════════════════════════════════════
@@ -123,12 +133,11 @@ def get_stylometric_score(text):
 def get_confidence_score(llm_score, stylometric_score):
     """
     Combines both signal scores into one confidence score.
-    Groq gets 60% weight, stylometrics get 40%.
+    Groq gets 70% weight, stylometrics get 30%.
 
     Returns a float between 0 and 1.
     """
-    return round((llm_score * 0.6) + (stylometric_score * 0.4), 4)
-
+    return round((llm_score * 0.7) + (stylometric_score * 0.3), 4)
 
 # ══════════════════════════════════════════════════════════════
 #  TRANSPARENCY LABEL
@@ -140,7 +149,7 @@ def get_label(confidence):
 
     Returns a tuple: (attribution string, label text)
     """
-    if confidence >= 0.65:
+    if confidence >= 0.60:
         attribution = "likely_ai"
         label = (
             "⚠️ Our system found patterns consistent with AI-generated text. "

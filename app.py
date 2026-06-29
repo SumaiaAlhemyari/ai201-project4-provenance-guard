@@ -14,6 +14,7 @@ import uuid
 from datetime import datetime, timezone
 
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -35,6 +36,9 @@ from store import (
 # ── Create the Flask app ───────────────────────────────────────
 app = Flask(__name__)
 
+# ── Allow requests from the Gradio interface ───────────────────
+CORS(app)
+
 # ── Set up rate limiting ───────────────────────────────────────
 limiter = Limiter(
     get_remote_address,
@@ -42,6 +46,11 @@ limiter = Limiter(
     default_limits=[],
     storage_uri="memory://",
 )
+
+# ── Short ID helper ────────────────────────────────────────────
+def short_id():
+    """Generates a random 6-character alphanumeric ID."""
+    return str(uuid.uuid4()).replace("-", "")[:6].upper()
 
 
 # ══════════════════════════════════════════════════════════════
@@ -66,8 +75,8 @@ def submit():
     text = data["text"]
     creator_id = data["creator_id"]
 
-    # Generate a unique ID for this submission
-    content_id = str(uuid.uuid4())
+    # Generate a short unique ID for this submission
+    content_id = short_id()
 
     # Run both detection signals
     llm_score = get_llm_score(text)
